@@ -6,10 +6,6 @@ from app.app import app
 
 client = TestClient(app)
 
-# ------------------------------
-# TESTES UNITÁRIOS DAS ROTAS
-# ------------------------------
-
 def test_root_route():
     """Deve retornar status 200 e mensagem da aplicação"""
     response = client.get("/")
@@ -19,15 +15,19 @@ def test_root_route():
     assert "Basic ML App" in body["message"]
 
 
-def test_predict_route_mocked():
+@patch("app.app.verify_token")
+def test_predict_route_mocked(mock_verify):
     """
     Testa a rota /predict sem precisar carregar modelo real nem acessar banco.
     Usa MagicMock para simular comportamento do modelo.
     """
+    # Simula autenticação bem-sucedida
+    mock_verify.return_value = True
+
     fake_model = MagicMock()
     fake_model.predict.return_value = ("intent_teste", {"intent_teste": 1.0})
 
-    # Mock do get_mongo_collection para evitar inserção real e ObjectId
+    # Mock do get_mongo_collection para evitar inserção real
     fake_collection = MagicMock()
     fake_collection.insert_one.return_value = {"_id": "fake_id_123"}
 
@@ -42,10 +42,14 @@ def test_predict_route_mocked():
 
 
 @patch("app.app.get_mongo_collection")
-def test_predict_inserts_into_db(mock_get_collection):
+@patch("app.app.verify_token")
+def test_predict_inserts_into_db(mock_verify, mock_get_collection):
     """
     Garante que a função collection.insert_one() é chamada ao prever algo.
     """
+    # Simula autenticação bem-sucedida
+    mock_verify.return_value = True
+
     fake_collection = MagicMock()
     mock_get_collection.return_value = fake_collection
 
